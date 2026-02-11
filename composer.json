@@ -10,8 +10,8 @@
     },
     "require": {
         "doctrine/orm": "^3.6",
-        "symfony/http-kernel": "^8.0",
-        "symfony/serializer": "^8.0",
-        "symfony/http-foundation": "^8.0"
+        "symfony/http-kernel": "^7.0",
+        "symfony/serializer": "^7.0",
+        "symfony/http-foundation": "^7.0"
     }
 }
