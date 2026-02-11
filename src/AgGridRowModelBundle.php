@@ -1,6 +1,6 @@
 <?php
 
-namespace AgGridRowModelBundle;
+namespace AgGridRowModel;
 
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 
