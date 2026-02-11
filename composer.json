@@ -1,0 +1,17 @@
+{
+    "name": "tismaximo/ag-grid-row-model",
+    "description": "Symfony implementation of the server side ag grid row model",
+    "type": "symfony-bundle",
+    "minimum-stability": "beta",
+    "autoload": {
+        "psr-4": {
+            "AgGridRowModel\\": "/src"
+        }
+    },
+    "require": {
+        "doctrine/orm": "^3.6",
+        "symfony/http-kernel": "^8.0",
+        "symfony/serializer": "^8.0",
+        "symfony/http-foundation": "^8.0"
+    }
+}
