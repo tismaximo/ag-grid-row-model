@@ -8,7 +8,7 @@ use Doctrine\ORM\EntityRepository;
 use Symfony\Component\HttpFoundation\Response;
 use AgGridRowModelBundle\Core\ServerSideGetRowsService;
 
-class AgGridsRowModelService {
+class AgGridRowModelService {
     function __construct(
         private ServerSideGetRowsService $rowsService,
         private SerializerInterface $serializer
