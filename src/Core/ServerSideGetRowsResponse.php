@@ -1,6 +1,6 @@
 <?php
 
-namespace AgGridRowModelBundle\RowModel;
+namespace AgGridRowModel\Core;
 
 class ServerSideGetRowsResponse {
     public array $rows;

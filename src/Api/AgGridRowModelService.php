@@ -1,12 +1,12 @@
 <?php
 
-namespace AgGridRowModelBundle\Api;
+namespace AgGridRowModel\Api;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Serializer\SerializerInterface;
 use Doctrine\ORM\EntityRepository;
 use Symfony\Component\HttpFoundation\Response;
-use AgGridRowModelBundle\Core\ServerSideGetRowsService;
+use AgGridRowModel\Core\ServerSideGetRowsService;
 
 class AgGridRowModelService {
     function __construct(

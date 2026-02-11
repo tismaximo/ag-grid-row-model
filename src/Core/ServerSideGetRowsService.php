@@ -1,6 +1,6 @@
 <?php
 
-namespace AgGridRowModelBundle\Core;
+namespace AgGridRowModel\Core;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;

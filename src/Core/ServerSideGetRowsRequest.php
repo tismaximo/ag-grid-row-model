@@ -1,6 +1,6 @@
 <?php
 
-namespace AgGridRowModelBundle\Core;
+namespace AgGridRowModel\Core;
 
 class ServerSideGetRowsRequest {
     public int $startRow;
