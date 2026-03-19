@@ -7,9 +7,11 @@ use Doctrine\ORM\QueryBuilder;
 
 class ServerSideGetRowsService {
     private EntityManagerInterface $em;
+    private int $i;
 
-    public function __construct(EntityManagerInterface $em) {
+    public function __construct(EntityManagerInterface $em, private array $is = []) {
         $this->em = $em;
+        $this->i = 0;
     }
 
     public function getData(string $entityClass, array $request): ServerSideGetRowsResponse {
@@ -20,6 +22,7 @@ class ServerSideGetRowsService {
             ->from($entityClass, 'e');
 
         $this->applyFilters($qb, $request->filterModel ?? []);
+        $this->i = 0;
         $this->applySorting($qb, $request->sortModel ?? []);
         $this->applyPagination($qb, $request);
 
@@ -35,7 +38,7 @@ class ServerSideGetRowsService {
         return $response;
     }
 
-    private function applyPagination(QueryBuilder $qb, ServerSideGetRowsRequest $request): void {
+    private function applyPagination(QueryBuilder &$qb, ServerSideGetRowsRequest $request): void {
         $start = $request->startRow ?? 0;
         $end = $request->endRow ?? 100;
 
@@ -43,7 +46,7 @@ class ServerSideGetRowsService {
         $qb->setMaxResults($end - $start);
     }
 
-    private function applySorting(QueryBuilder $qb, array $sortModel): void {
+    private function applySorting(QueryBuilder &$qb, array $sortModel): void {
         foreach ($sortModel as $sort) {
             $field = $sort['colId'];
             $direction = strtoupper($sort['sort']) === 'DESC' ? 'DESC' : 'ASC';
@@ -52,11 +55,10 @@ class ServerSideGetRowsService {
         }
     }
 
-    private function applyFilters(QueryBuilder $qb, array $filterModel): void {
-        $i = 0;
-
+    private function applyFilters(QueryBuilder &$qb, array $filterModel): void {
         foreach ($filterModel as $field => $filter) {
-            $param = 'param' . $i++;
+            $param = 'param' . $this->i++;
+            $this->is[] = $param;
 
             if (!isset($filter['filterType'])) {
                 continue;
@@ -65,48 +67,88 @@ class ServerSideGetRowsService {
             switch ($filter['filterType']) {
 
                 case 'text':
-                    $this->applyTextFilter($qb, $field, $filter, $param);
+                    if (isset($filter['conditions'])) {
+                        foreach ($filter['conditions'] as $condition) {
+                            $this->applyTextFilter($qb, $field, $condition, 'param'.$this->i++, $filter['operator']);
+                        }
+                    } else {
+                        $this->applyTextFilter($qb, $field, $filter, $param);
+                    }
                     break;
 
                 case 'number':
-                    $this->applyNumberFilter($qb, $field, $filter, $param);
+                    if (isset($filter['conditions'])) {
+                        foreach ($filter['conditions'] as $condition) {
+                            $this->applyNumberFilter($qb, $field, $condition, 'param'.$this->i++, $filter['operator']);
+                        }
+                    } else {
+                        $this->applyNumberFilter($qb, $field, $filter, $param);
+                    }   
                     break;
 
                 case 'date':
-                    $this->applyDateFilter($qb, $field, $filter, $param);
+                    if (isset($filter['conditions'])) {
+                        foreach ($filter['conditions'] as $condition) {
+                            $this->applyDateFilter($qb, $field, $condition, 'param'.$this->i++, $filter['operator']);
+                        }
+                    } else {
+                        $this->applyDateFilter($qb, $field, $filter, $param);
+                    }
+                    break;
+
+                case 'multi':
+                    foreach ($filter['filterModels'] as $subFilter) {
+                        $this->applyFilters($qb, [$field => $subFilter]);
+                    }
                     break;
             }
         }
     }
 
-    private function applyTextFilter(QueryBuilder $qb, string $field, array $filter, string $param): void {
+    private function applyTextFilter(QueryBuilder &$qb, string $field, array $filter, string $param, ?string $operator = null): void {
         $value = $filter['filter'];
         $type = $filter['type'];
 
         switch ($type) {
             case 'equals':
-                $qb->andWhere("e.$field = :$param")
-                   ->setParameter($param, $value);
+                if ($operator === 'OR') {
+                    $qb->orWhere("e.$field = :$param");
+                } else {
+                    $qb->andWhere("e.$field = :$param");
+                }
+                $qb->setParameter($param, $value);
                 break;
 
             case 'contains':
-                $qb->andWhere("e.$field LIKE :$param")
-                   ->setParameter($param, "%$value%");
+                if ($operator === 'OR') {
+                    $qb->orWhere("e.$field LIKE :$param");
+                } else {
+                    $qb->andWhere("e.$field LIKE :$param");
+                }
+                $qb->setParameter($param, "%$value%");
                 break;
 
             case 'startsWith':
-                $qb->andWhere("e.$field LIKE :$param")
-                   ->setParameter($param, "$value%");
+                if ($operator === 'OR') {
+                    $qb->orWhere("e.$field LIKE :$param");
+                } else {
+                    $qb->andWhere("e.$field LIKE :$param");
+                }
+                $qb->setParameter($param, "$value%");
                 break;
 
             case 'endsWith':
-                $qb->andWhere("e.$field LIKE :$param")
-                   ->setParameter($param, "%$value");
+                if ($operator === 'OR') {
+                    $qb->orWhere("e.$field LIKE :$param");
+                } else {
+                    $qb->andWhere("e.$field LIKE :$param");
+                }
+                $qb->setParameter($param, "%$value");
                 break;
         }
     }
 
-    private function applyNumberFilter(QueryBuilder $qb, string $field, array $filter, string $param): void {
+    private function applyNumberFilter(QueryBuilder &$qb, string $field, array $filter, string $param): void {
         $value = $filter['filter'];
         $type = $filter['type'];
 
@@ -135,7 +177,7 @@ class ServerSideGetRowsService {
         $qb->setParameter($param, $value);
     }
 
-    private function applyDateFilter(QueryBuilder $qb, string $field, array $filter, string $param): void {
+    private function applyDateFilter(QueryBuilder &$qb, string $field, array $filter, string $param): void {
         $value = $filter['dateFrom'];
         $type = $filter['type'];
 
