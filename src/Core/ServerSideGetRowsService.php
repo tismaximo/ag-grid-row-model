@@ -6,26 +6,35 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 
 class ServerSideGetRowsService {
-    private EntityManagerInterface $em;
-    private int $i;
-
-    public function __construct(EntityManagerInterface $em, private array $is = []) {
-        $this->em = $em;
-        $this->i = 0;
-    }
+    public function __construct(
+        private EntityManagerInterface $em, 
+        private array $is = [],
+        private int $i = 0
+    ) {}
 
     public function getData(string $entityClass, array $request): ServerSideGetRowsResponse {
+        $qb = $this->getQuery($entityClass, $request);
+        $response = $this->getResponseFromQuery($entityClass, $qb, $request);
+        return $response;
+    }
+
+    public function getQuery(string $entityClass, array $request): QueryBuilder {
         $request = new ServerSideGetRowsRequest($request);
 
         $qb = $this->em->createQueryBuilder()
-            ->select('e')
-            ->from($entityClass, 'e');
+            ->select('main')
+            ->from($entityClass, 'main');
 
         $this->applyFilters($qb, $request->filterModel ?? []);
         $this->i = 0;
         $this->applySorting($qb, $request->sortModel ?? []);
         $this->applyPagination($qb, $request);
 
+        return $qb;
+    }
+
+    public function getResponseFromQuery(string $entityClass, QueryBuilder $qb, array $request): ServerSideGetRowsResponse {
+        $request = new ServerSideGetRowsRequest($request);
         $rows = $qb->getQuery()->getArrayResult();
         $lastRow = $this->getTotalCount($entityClass, $request);
 
@@ -51,7 +60,7 @@ class ServerSideGetRowsService {
             $field = $sort['colId'];
             $direction = strtoupper($sort['sort']) === 'DESC' ? 'DESC' : 'ASC';
 
-            $qb->addOrderBy("e.$field", $direction);
+            $qb->addOrderBy("main.$field", $direction);
         }
     }
 
@@ -112,36 +121,36 @@ class ServerSideGetRowsService {
         switch ($type) {
             case 'equals':
                 if ($operator === 'OR') {
-                    $qb->orWhere("e.$field = :$param");
+                    $qb->orWhere("main.$field = :$param");
                 } else {
-                    $qb->andWhere("e.$field = :$param");
+                    $qb->andWhere("main.$field = :$param");
                 }
                 $qb->setParameter($param, $value);
                 break;
 
             case 'contains':
                 if ($operator === 'OR') {
-                    $qb->orWhere("e.$field LIKE :$param");
+                    $qb->orWhere("main.$field LIKE :$param");
                 } else {
-                    $qb->andWhere("e.$field LIKE :$param");
+                    $qb->andWhere("main.$field LIKE :$param");
                 }
                 $qb->setParameter($param, "%$value%");
                 break;
 
             case 'startsWith':
                 if ($operator === 'OR') {
-                    $qb->orWhere("e.$field LIKE :$param");
+                    $qb->orWhere("main.$field LIKE :$param");
                 } else {
-                    $qb->andWhere("e.$field LIKE :$param");
+                    $qb->andWhere("main.$field LIKE :$param");
                 }
                 $qb->setParameter($param, "$value%");
                 break;
 
             case 'endsWith':
                 if ($operator === 'OR') {
-                    $qb->orWhere("e.$field LIKE :$param");
+                    $qb->orWhere("main.$field LIKE :$param");
                 } else {
-                    $qb->andWhere("e.$field LIKE :$param");
+                    $qb->andWhere("main.$field LIKE :$param");
                 }
                 $qb->setParameter($param, "%$value");
                 break;
@@ -154,23 +163,23 @@ class ServerSideGetRowsService {
 
         switch ($type) {
             case 'equals':
-                $qb->andWhere("e.$field = :$param");
+                $qb->andWhere("main.$field = :$param");
                 break;
 
             case 'greaterThan':
-                $qb->andWhere("e.$field > :$param");
+                $qb->andWhere("main.$field > :$param");
                 break;
 
             case 'lessThan':
-                $qb->andWhere("e.$field < :$param");
+                $qb->andWhere("main.$field < :$param");
                 break;
 
             case 'greaterThanOrEqual':
-                $qb->andWhere("e.$field >= :$param");
+                $qb->andWhere("main.$field >= :$param");
                 break;
 
             case 'lessThanOrEqual':
-                $qb->andWhere("e.$field <= :$param");
+                $qb->andWhere("main.$field <= :$param");
                 break;
         }
 
@@ -183,15 +192,15 @@ class ServerSideGetRowsService {
 
         switch ($type) {
             case 'equals':
-                $qb->andWhere("e.$field = :$param");
+                $qb->andWhere("main.$field = :$param");
                 break;
 
             case 'greaterThan':
-                $qb->andWhere("e.$field > :$param");
+                $qb->andWhere("main.$field > :$param");
                 break;
 
             case 'lessThan':
-                $qb->andWhere("e.$field < :$param");
+                $qb->andWhere("main.$field < :$param");
                 break;
         }
 
@@ -200,8 +209,8 @@ class ServerSideGetRowsService {
 
     private function getTotalCount(string $entityClass, ServerSideGetRowsRequest $request): int {
         $qb = $this->em->createQueryBuilder()
-            ->select('COUNT(e)')
-            ->from($entityClass, 'e');
+            ->select('COUNT(main)')
+            ->from($entityClass, 'main');
 
         $this->applyFilters($qb, $request->filterModel ?? []);
 
