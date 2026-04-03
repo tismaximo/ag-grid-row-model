@@ -12,16 +12,17 @@ class ServerSideGetRowsService {
         private int $i = 0
     ) {}
 
-    public function getData(string $entityClass, array $request): ServerSideGetRowsResponse {
-        $qb = $this->getQuery($entityClass, $request);
+    public function getData(string $entityClass, array $request, QueryBuilder|null $qb = null): ServerSideGetRowsResponse {
+        $qb = $this->buildQuery($entityClass, $request, $qb);
         $response = $this->getResponseFromQuery($entityClass, $qb, $request);
         return $response;
     }
 
-    public function getQuery(string $entityClass, array $request): QueryBuilder {
+    public function buildQuery(string $entityClass, array $request, QueryBuilder|null $qb): QueryBuilder {
         $request = new ServerSideGetRowsRequest($request);
 
-        $qb = $this->em->createQueryBuilder()
+        if (!$qb)
+            $qb = $this->em->createQueryBuilder()
             ->select('main')
             ->from($entityClass, 'main');
 
