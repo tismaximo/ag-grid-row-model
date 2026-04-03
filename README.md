@@ -2,13 +2,13 @@
 This bundle implements the server side row model logic in accordance to [the Ag Grid documentation](https://www.ag-grid.com/javascript-data-grid/server-side-model/), exposing a single service that takes care of retrieving the rows automatically requested by Ag Grid, and returning a Response object with the expected format.
 ## Usage
 Install the dependency with:
-```
+```bash
 composer require tismaximo/ag-grid-row-model
 ```
 Then, in your controller, create a new endpoint like so to use the implementation:
-```
+```php
 use AgGridRowModelBundle\Api\AgGridRowModelService
-...php
+...
 #[Route(path: '/ag-grid-rows', name: 'example_ag_grid_rows', methods: ['POST'])]
     public function rows(Request $request, ExampleRepository $repository, AgGridRowModelService $service)
 	{/*{{{*/
@@ -17,6 +17,6 @@ use AgGridRowModelBundle\Api\AgGridRowModelService
 	}/*}}}*/
 ```
 Service contract:
-```
+```php
 public function generateResponse(Request $request, EntityRepository $repository, QueryBuilder|null $qb): Response
 ```
