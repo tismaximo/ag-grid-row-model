@@ -8,14 +8,15 @@ composer require tismaximo/ag-grid-row-model
 Then, in your controller, create a new endpoint like so to use the implementation:
 ```
 use AgGridRowModelBundle\Api\AgGridRowModelService
-...
+...php
 #[Route(path: '/ag-grid-rows', name: 'example_ag_grid_rows', methods: ['POST'])]
     public function rows(Request $request, ExampleRepository $repository, AgGridRowModelService $service)
 	{/*{{{*/
-		return $service->generateResponse($request, $repository);
+		$qb = $repository->getCustomQueryBuilder(); // or null to get all fields
+		return $service->generateResponse($request, $repository, $qb);
 	}/*}}}*/
 ```
 Service contract:
 ```
-public function generateResponse(Request $request, EntityRepository $repository): Response
+public function generateResponse(Request $request, EntityRepository $repository, QueryBuilder|null $qb): Response
 ```
