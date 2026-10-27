@@ -13,9 +13,8 @@ class ServerSideGetRowsService {
     ) {}
 
     public function getData(string $entityClass, array $request, QueryBuilder|null $qb = null): ServerSideGetRowsResponse {
-        $originalQuery = $qb;
         $qb = $this->buildQuery($entityClass, $request, $qb);
-        $response = $this->getResponseFromQuery($entityClass, $qb, $request, $originalQuery);
+        $response = $this->getResponseFromQuery($entityClass, $qb, $request);
         return $response;
     }
 
@@ -39,8 +38,8 @@ class ServerSideGetRowsService {
 
     public function getResponseFromQuery(string $entityClass, QueryBuilder|null $qb, array $request, QueryBuilder|null $originalQuery = null): ServerSideGetRowsResponse {
         $request = new ServerSideGetRowsRequest($request);
-        $rows = $qb->getQuery()->getArrayResult();
-        $lastRow = $this->getTotalCount($entityClass, $request, $originalQuery);
+        $rows = $qb ? $qb->getQuery()->getArrayResult() : [];
+        $lastRow = $this->getTotalCount($entityClass, $request, $qb ?? $originalQuery);
 
         $response = new ServerSideGetRowsResponse();
 
@@ -202,16 +201,26 @@ class ServerSideGetRowsService {
 
     private function getTotalCount(string $entityClass, ServerSideGetRowsRequest $request, QueryBuilder|null $qb): int {
         if ($qb) {
-            $this->applyFilters($qb, $request->filterModel ?? []);
-            $qb->select('COUNT(main.id)');
+            $countQb = clone $qb;
+            $countQb->setFirstResult(null);
+            $countQb->setMaxResults(null);
+            $countQb->resetDQLPart('orderBy');
+
+            $rootAliases = $countQb->getRootAliases();
+            $rootAlias = !empty($rootAliases) ? $rootAliases[0] : 'main';
+            $countQb->select("COUNT(DISTINCT $rootAlias.id)");
         } else {
-            $qb = $this->em->createQueryBuilder()
+            $countQb = $this->em->createQueryBuilder()
                 ->select('COUNT(main.id)')
                 ->from($entityClass, 'main');
-            $this->applyFilters($qb, $request->filterModel ?? []);
+            $this->applyFilters($countQb, $request->filterModel ?? []);
         }
 
-        return (int) $qb->getQuery()->getSingleScalarResult();
+        try {
+            return (int) $countQb->getQuery()->getSingleScalarResult();
+        } catch (\Doctrine\ORM\NoResultException) {
+            return 0;
+        }
     }
 
     private function getSelectAliases( QueryBuilder $qb ) 
