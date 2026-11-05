@@ -199,7 +199,7 @@ class ServerSideGetRowsService {
         return '1=1';
     }
 
-    private function getTotalCount(string $entityClass, ServerSideGetRowsRequest $request, QueryBuilder|null $qb): int {
+    private function getTotalCount(string $entityClass, ServerSideGetRowsRequest $request, QueryBuilder|null $qb): int { 
         if ($qb) {
             $countQb = clone $qb;
             $countQb->setFirstResult(null);
@@ -208,10 +208,12 @@ class ServerSideGetRowsService {
 
             $rootAliases = $countQb->getRootAliases();
             $rootAlias = !empty($rootAliases) ? $rootAliases[0] : 'main';
-            $countQb->select("COUNT(DISTINCT $rootAlias.id)");
+            $countExpr = $this->getIdentifierCountExpression($entityClass, $rootAlias);
+            $countQb->select("COUNT(DISTINCT $countExpr)");
         } else {
+            $countExpr = $this->getIdentifierCountExpression($entityClass, 'main');
             $countQb = $this->em->createQueryBuilder()
-                ->select('COUNT(main.id)')
+                ->select("COUNT(DISTINCT $countExpr)")
                 ->from($entityClass, 'main');
             $this->applyFilters($countQb, $request->filterModel ?? []);
         }
@@ -221,6 +223,28 @@ class ServerSideGetRowsService {
         } catch (\Doctrine\ORM\NoResultException) {
             return 0;
         }
+    }
+
+    private function getIdentifierCountExpression(string $entityClass, string $rootAlias): string {
+        try {
+            $metadata = $this->em->getClassMetadata($entityClass);
+            $identifiers = $metadata->getIdentifierFieldNames();
+
+            if (count($identifiers) === 1) {
+                return "$rootAlias." . $identifiers[0];
+            }
+
+            if (count($identifiers) > 1) {
+                $expr = "$rootAlias." . $identifiers[0];
+                for ($i = 1; $i < count($identifiers); $i++) {
+                    $expr = "CONCAT($expr, $rootAlias." . $identifiers[$i] . ")";
+                }
+                return $expr;
+            }
+        } catch (\Throwable) {
+        }
+
+        return "$rootAlias.id";
     }
 
     private function getSelectAliases( QueryBuilder $qb ) 
